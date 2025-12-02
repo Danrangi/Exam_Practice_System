@@ -7,7 +7,20 @@
 </head>
 <body>
     <div class="container mt-5">
-        <h1>Admin Dashboard</h1>
+
+        <div class="container mt-5">
+    <h1 class="mb-4">Welcome, {{ g.user }} (Admin)</h1>
+    
+    <div class="list-group" style="width: 300px;">
+        <a href="{{ url_for('admin_panel') }}" class="list-group-item list-group-item-action list-group-item-primary">
+            <i class="fas fa-edit me-2"></i> Manage Exams and Questions
+        </a>
+        <a href="{{ url_for('logout') }}" class="list-group-item list-group-item-action list-group-item-danger">
+            <i class="fas fa-sign-out-alt me-2"></i> Logout
+        </a>
+    </div>
+</div>
+        <!---<h1>Admin Dashboard</h1> --->
         <p>Welcome, {{ g.user }}. Your login is successful!</p>
 
         <a href="{{ url_for('logout') }}" class="btn btn-danger">Logout</a>

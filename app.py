@@ -58,6 +58,29 @@ class Question(db.Model):
     # Optional field for the admin to add an explanation
     explanation = db.Column(db.Text)
 
+
+def add_initial_data():
+    """Adds the three main exam types if they do not already exist."""
+    
+    # Check if JAMB exists
+    if not Exam.query.filter_by(name='JAMB').first():
+        jamb = Exam(name='JAMB', description='Joint Admissions and Matriculation Board')
+        db.session.add(jamb)
+    
+    # Check if WAEC exists
+    if not Exam.query.filter_by(name='WAEC').first():
+        waec = Exam(name='WAEC', description='West African Examinations Council')
+        db.session.add(waec)
+        
+    # Check if NECO exists
+    if not Exam.query.filter_by(name='NECO').first():
+        neco = Exam(name='NECO', description='National Examination Council')
+        db.session.add(neco)
+        
+    # Commit all changes to the database
+    db.session.commit()
+    print("Initial exam data checked and added if missing.")
+
 # --- 3. ROUTES (WEB PAGES) ---
 
 # app.py (Replace the simple @app.route('/') index function with this)
@@ -110,11 +133,10 @@ def dashboard():
 
 if __name__ == '__main__':
     # We need to create the database tables *before* running the app.
-    # This block ensures the tables are created if they don't exist yet.
     with app.app_context():
         db.create_all()
+        # NEW LINE: Call the function to populate initial data
+        add_initial_data() 
         print("Database tables created successfully (if they didn't exist).")
 
-    # The Codespace environment usually runs on a specific port, often 5000.
-    # Host='0.0.0.0' makes it externally accessible for testing.
     app.run(debug=True, host='0.0.0.0', port=5000)
