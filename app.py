@@ -113,18 +113,50 @@ def logout():
     return redirect(url_for('login'))
 
 # >>> MISSING ROUTE INSERTED HERE (The fix for the BuildError) <<<
-@app.route('/admin')
+# app.py (REPLACE the existing admin_panel function with this)
+
+@app.route('/admin', methods=['GET', 'POST'])
 def admin_panel():
-    """Admin dashboard showing main management links."""
+    """Handles displaying exam/subject data and creating new subjects."""
     if not g.user:
         flash('Please login to access the admin panel.', 'warning')
         return redirect(url_for('login'))
         
-    # Query all existing exam types from the database
+    if request.method == 'POST':
+        exam_id = request.form.get('exam_id')
+        subject_name = request.form.get('subject_name', '').strip()
+
+        if not exam_id or not subject_name:
+            flash('Both Exam Type and Subject Name are required.', 'danger')
+        else:
+            try:
+                # Check for uniqueness first (SQLAlchemy handles this too, but this gives a cleaner error message)
+                existing_subject = Subject.query.filter_by(name=subject_name, exam_id=exam_id).first()
+                if existing_subject:
+                    exam_name = Exam.query.get(exam_id).name
+                    flash(f"Subject '{subject_name}' already exists for {exam_name}.", 'danger')
+                else:
+                    new_subject = Subject(name=subject_name, exam_id=exam_id)
+                    db.session.add(new_subject)
+                    db.session.commit()
+                    flash(f"Subject '{subject_name}' added successfully!", 'success')
+            except Exception as e:
+                db.session.rollback()
+                flash(f"An error occurred while adding the subject: {e}", 'danger')
+
+    # Data to display on the page (always executed on GET and after POST)
     exams = Exam.query.all()
+    # Fetch all subjects to display under their respective exams
+    all_subjects = Subject.query.order_by(Subject.exam_id, Subject.name).all()
     
-    return render_template('admin_panel.html', exams=exams)
-# >>> END OF MISSING ROUTE <<<
+    # Organize subjects by exam ID for easier rendering in the template
+    subjects_by_exam = {}
+    for exam in exams:
+        subjects_by_exam[exam.id] = []
+    for subject in all_subjects:
+        subjects_by_exam[subject.exam_id].append(subject)
+
+    return render_template('admin_panel.html', exams=exams, subjects_by_exam=subjects_by_exam)# >>> END OF MISSING ROUTE <<<
 
 
 @app.route('/dashboard')
