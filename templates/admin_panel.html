@@ -4,7 +4,13 @@
     <meta charset="UTF-8">
     <title>Admin Panel - Management Hub</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .exam-card { border-radius: 10px; border: 1px solid #ccc; margin-bottom: 20px; padding: 15px; }
+        .subject-list li { padding: 8px 15px; border-bottom: 1px solid #eee; }
+        .subject-list li:last-child { border-bottom: none; }
+    </style>
 </head>
 <body>
     <div class="container mt-5">
@@ -13,6 +19,7 @@
 
         <a href="{{ url_for('dashboard') }}" class="btn btn-secondary mb-4"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
 
+        <!-- Display Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
@@ -21,26 +28,13 @@
         {% endif %}
         {% endwith %}
 
-        <div class="row">
-            <div class="col-md-12">
-                <h2>1. Available Exam Types</h2>
-                <p>These are the foundation of your system (JAMB, WAEC, NECO).</p>
-                <ul class="list-group">
-                    {% for exam in exams %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        {{ exam.name }}
-                        <a href="#" class="btn btn-sm btn-info disabled" aria-disabled="true">View Subjects (Coming Next)</a>
-                    </li>
-                    {% endfor %}
-                </ul>
-            </div>
-        </div>
-
-        <h2 class="mt-5">2. Add New Subject</h2>
+        <!-- 1. ADD NEW SUBJECT FORM -->
+        <h2 class="mt-4">1. Add New Subject</h2>
         <p>Define the subjects available under an Exam type.</p>
-        <form method="POST" action="#" class="row g-3">
+        <!-- The form now submits to the same page, /admin -->
+        <form method="POST" action="{{ url_for('admin_panel') }}" class="row g-3 p-3 mb-5 border rounded bg-light">
             <div class="col-md-4">
-                <label for="exam_select" class="form-label">Exam Type</label>
+                <label for="exam_select" class="form-label fw-bold">Select Exam Type</label>
                 <select id="exam_select" name="exam_id" class="form-select" required>
                     <option value="">Choose Exam...</option>
                     {% for exam in exams %}
@@ -49,14 +43,41 @@
                 </select>
             </div>
             <div class="col-md-4">
-                <label for="subject_name" class="form-label">Subject Name</label>
+                <label for="subject_name" class="form-label fw-bold">Subject Name (e.g., Mathematics)</label>
                 <input type="text" id="subject_name" name="subject_name" class="form-control" required>
             </div>
             <div class="col-md-4 align-self-end">
-                <button type="submit" class="btn btn-success w-100 disabled" aria-disabled="true">Add Subject (Next Step)</button>
+                <button type="submit" class="btn btn-success w-100"><i class="fas fa-plus-circle"></i> Add Subject</button>
             </div>
         </form>
+        
 
+        <!-- 2. AVAILABLE EXAMS AND SUBJECTS LIST -->
+        <h2>2. Current Exams and Subjects</h2>
+        <div class="row">
+            {% for exam in exams %}
+            <div class="col-md-4">
+                <div class="card shadow-sm exam-card">
+                    <h5 class="card-title text-primary">{{ exam.name }}</h5>
+                    <p class="text-muted small">{{ exam.description }}</p>
+                    
+                    <strong class="mt-2 mb-1">Subjects:</strong>
+                    <ul class="list-unstyled subject-list bg-white rounded">
+                        {% if subjects_by_exam[exam.id] %}
+                            {% for subject in subjects_by_exam[exam.id] %}
+                            <li>
+                                <span class="fw-bold">{{ subject.name }}</span>
+                                <a href="#" class="btn btn-sm btn-info float-end disabled" aria-disabled="true">Add Questions (Next Step)</a>
+                            </li>
+                            {% endfor %}
+                        {% else %}
+                            <li class="text-muted fst-italic">No subjects added yet.</li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>

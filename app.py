@@ -158,6 +158,64 @@ def admin_panel():
 
     return render_template('admin_panel.html', exams=exams, subjects_by_exam=subjects_by_exam)# >>> END OF MISSING ROUTE <<<
 
+# app.py (Insert this new route after the existing admin_panel function)
+
+@app.route('/admin/questions/<int:subject_id>', methods=['GET', 'POST'])
+def question_management(subject_id):
+    """Handles CRUD operations for Questions related to a specific Subject."""
+    if not g.user:
+        flash('Please login to access question management.', 'warning')
+        return redirect(url_for('login'))
+
+    subject = Subject.query.get_or_404(subject_id)
+    exam = subject.exam # Automatically loaded via backref
+
+    if request.method == 'POST':
+        # Retrieve form data
+        question_text = request.form.get('question_text', '').strip()
+        option_a = request.form.get('option_a', '').strip()
+        option_b = request.form.get('option_b', '').strip()
+        option_c = request.form.get('option_c', '').strip()
+        option_d = request.form.get('option_d', '').strip()
+        correct_answer = request.form.get('correct_answer', '').upper()
+        explanation = request.form.get('explanation', '').strip()
+
+        # Simple validation
+        if not all([question_text, option_a, option_b, option_c, option_d, correct_answer]):
+            flash('All question fields and the correct answer must be provided.', 'danger')
+        elif correct_answer not in ['A', 'B', 'C', 'D']:
+            flash('Correct answer must be A, B, C, or D.', 'danger')
+        else:
+            try:
+                new_question = Question(
+                    question_text=question_text,
+                    option_a=option_a,
+                    option_b=option_b,
+                    option_c=option_c,
+                    option_d=option_d,
+                    correct_answer=correct_answer,
+                    explanation=explanation,
+                    subject_id=subject_id
+                )
+                db.session.add(new_question)
+                db.session.commit()
+                flash('Question added successfully!', 'success')
+                # Redirect to GET request to clear the form
+                return redirect(url_for('question_management', subject_id=subject_id))
+
+            except Exception as e:
+                db.session.rollback()
+                flash(f"An error occurred while adding the question: {e}", 'danger')
+
+    # Data for GET (and after POST redirect)
+    questions = Question.query.filter_by(subject_id=subject_id).order_by(Question.id.desc()).all()
+    
+    return render_template(
+        'question_management.html', 
+        subject=subject, 
+        exam=exam, 
+        questions=questions
+    )
 
 @app.route('/dashboard')
 def dashboard():
