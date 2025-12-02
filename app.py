@@ -11,8 +11,6 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # Initialize the SQLAlchemy object
 db = SQLAlchemy(app)
 
-# app.py (Insert this after database configuration)
-
 # --- ADMIN CREDENTIALS ---
 # CHANGE THIS TO A SECURE PASSWORD BEFORE FINAL DEPLOYMENT!
 app.config['ADMIN_USERNAME'] = 'EPS' 
@@ -20,7 +18,7 @@ app.config['ADMIN_PASSWORD'] = 'AdminEPS123'
 app.config['SECRET_KEY'] = 'Danrangi@2025' # Flask needs this for session management
 
 # --- 2. DEFINE DATABASE MODELS (SCHEMA) ---
-# app.py (Insert this code block)
+
 # Model 1: Exam Type (e.g., JAMB, WAEC, NECO)
 class Exam(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -30,7 +28,6 @@ class Exam(db.Model):
     subjects = db.relationship('Subject', backref='exam', lazy=True)
 
 # Model 2: Subject (e.g., English, Mathematics, Physics)
-
 class Subject(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False) # e.g., 'English Language'
@@ -42,7 +39,6 @@ class Subject(db.Model):
     __table_args__ = (db.UniqueConstraint('name', 'exam_id', name='_name_exam_uc'),)
 
 # Model 3: Question
-
 class Question(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     question_text = db.Column(db.Text, nullable=False)
@@ -83,16 +79,12 @@ def add_initial_data():
 
 # --- 3. ROUTES (WEB PAGES) ---
 
-# app.py (Replace the simple @app.route('/') index function with this)
-
 @app.before_request
 def before_request():
     """Sets the global variable 'g.user' to the logged-in username."""
     g.user = None
     if 'username' in session:
         g.user = session['username']
-
-# --- ROUTES (WEB PAGES) ---
 
 @app.route('/', methods=['GET', 'POST'])
 def login():
@@ -119,6 +111,21 @@ def logout():
     session.pop('username', None)
     flash('You have been logged out.', 'info')
     return redirect(url_for('login'))
+
+# >>> MISSING ROUTE INSERTED HERE (The fix for the BuildError) <<<
+@app.route('/admin')
+def admin_panel():
+    """Admin dashboard showing main management links."""
+    if not g.user:
+        flash('Please login to access the admin panel.', 'warning')
+        return redirect(url_for('login'))
+        
+    # Query all existing exam types from the database
+    exams = Exam.query.all()
+    
+    return render_template('admin_panel.html', exams=exams)
+# >>> END OF MISSING ROUTE <<<
+
 
 @app.route('/dashboard')
 def dashboard():
