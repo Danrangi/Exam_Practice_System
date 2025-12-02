@@ -62,19 +62,23 @@
                     <p class="text-muted small">{{ exam.description }}</p>
                     
                     <strong class="mt-2 mb-1">Subjects:</strong>
-                    <ul class="list-unstyled subject-list bg-white rounded">
-                        {% if subjects_by_exam[exam.id] %}
-                            {% for subject in subjects_by_exam[exam.id] %}
-                            <li>
-                                <span class="fw-bold">{{ subject.name }}</span>
-                                <a href="#" class="btn btn-sm btn-info float-end disabled" aria-disabled="true">Add Questions (Next Step)</a>
-                            </li>
-                            {% endfor %}
-                        {% else %}
-                            <li class="text-muted fst-italic">No subjects added yet.</li>
-                        {% endif %}
-                    </ul>
-                </div>
+                    <!-- templates/admin_panel.html (Replace this section: <ul class="list-unstyled subject-list... ) -->
+
+<ul class="list-unstyled subject-list bg-white rounded">
+    {% if subjects_by_exam[exam.id] %}
+        {% for subject in subjects_by_exam[exam.id] %}
+        <li>
+            <span class="fw-bold">{{ subject.name }}</span>
+            <a href="{{ url_for('question_management', subject_id=subject.id) }}" class="btn btn-sm btn-info float-end">
+                <i class="fas fa-plus"></i> Add Questions ({{ subject.questions|length }})
+            </a>
+        </li>
+        {% endfor %}
+    {% else %}
+        <li class="text-muted fst-italic">No subjects added yet.</li>
+    {% endif %}
+</ul>
+</div>
             </div>
             {% endfor %}
         </div>
