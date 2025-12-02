@@ -86,23 +86,28 @@ def before_request():
     if 'username' in session:
         g.user = session['username']
 
-@app.route('/', methods=['GET', 'POST'])
-def login():
-    if g.user:
-        # If user is already logged in, redirect them to the dashboard
-        return redirect(url_for('dashboard'))
-    
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
+@app.route('/admin', methods=['GET', 'POST'])
+def admin_panel():
+    """Handles displaying exam/subject data and creating new subjects."""
+    if not g.user:
+        flash('Please login to access the admin panel.', 'warning')
+        return redirect(url_for('login'))
+    # ... rest of the function ...
 
-        if username == app.config['ADMIN_USERNAME'] and password == app.config['ADMIN_PASSWORD']:
-            session['username'] = username
-            flash('Login successful!', 'success')
-            return redirect(url_for('dashboard'))
-        else:
-            flash('Invalid credentials. Please try again.', 'danger')
-    
+@app.route('/admin', methods=['GET', 'POST'])
+def admin_panel():
+    """
+    Handles displaying exam/subject data and creating new subjects.
+    REQUIRES: Logged in user must be the Admin.
+    """
+    admin_username = app.config['ADMIN_USERNAME']
+
+    # --- ADDED ADMIN AUTHORIZATION CHECK ---
+    if g.user != admin_username:
+        flash('Authorization required. You must be the administrator to access this panel.', 'danger')
+        return redirect(url_for('dashboard'))
+
+    # ... rest of the function ...    
     # Render the login form
     return render_template('login.html')
 
