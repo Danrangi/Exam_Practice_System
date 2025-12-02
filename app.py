@@ -86,28 +86,30 @@ def before_request():
     if 'username' in session:
         g.user = session['username']
 
-@app.route('/admin', methods=['GET', 'POST'])
-def admin_panel():
-    """Handles displaying exam/subject data and creating new subjects."""
-    if not g.user:
-        flash('Please login to access the admin panel.', 'warning')
-        return redirect(url_for('login'))
-    # ... rest of the function ...
-
-@app.route('/admin', methods=['GET', 'POST'])
-def admin_panel():
-    """
-    Handles displaying exam/subject data and creating new subjects.
-    REQUIRES: Logged in user must be the Admin.
-    """
-    admin_username = app.config['ADMIN_USERNAME']
-
-    # --- ADDED ADMIN AUTHORIZATION CHECK ---
-    if g.user != admin_username:
-        flash('Authorization required. You must be the administrator to access this panel.', 'danger')
+@app.route('/', methods=['GET', 'POST'])
+def login():
+    if g.user:
+        # If user is already logged in, redirect them to the dashboard
         return redirect(url_for('dashboard'))
+    
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
 
-    # ... rest of the function ...    
+        # 1. Check for admin credentials
+        if username == app.config['ADMIN_USERNAME'] and password == app.config['ADMIN_PASSWORD']:
+            session['username'] = username
+            flash('Admin Login successful! You have full access.', 'success')
+            return redirect(url_for('dashboard'))
+        # 2. Check for student login (any non-admin credentials)
+        elif username and password:
+            session['username'] = username  # Store the student's entered username
+            flash(f'Welcome, {username}! Start your practice.', 'success')
+            return redirect(url_for('dashboard'))
+        # 3. Handle failure
+        else:
+            flash('Invalid credentials or fields missing. Please try again.', 'danger')
+    
     # Render the login form
     return render_template('login.html')
 
@@ -119,10 +121,16 @@ def logout():
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin_panel():
-    """Handles displaying exam/subject data and creating new subjects."""
-    if not g.user:
-        flash('Please login to access the admin panel.', 'warning')
-        return redirect(url_for('login'))
+    """
+    Handles displaying exam/subject data and creating new subjects.
+    REQUIRES: Logged in user must be the Admin.
+    """
+    admin_username = app.config['ADMIN_USERNAME']
+    
+    # --- ADDED ADMIN AUTHORIZATION CHECK ---
+    if g.user != admin_username:
+        flash('Authorization required. You must be the administrator to access this panel.', 'danger')
+        return redirect(url_for('dashboard'))
         
     if request.method == 'POST':
         exam_id = request.form.get('exam_id')
@@ -170,10 +178,16 @@ def admin_panel():
 
 @app.route('/admin/questions/<int:subject_id>', methods=['GET', 'POST'])
 def question_management(subject_id):
-    """Handles CRUD operations for Questions related to a specific Subject."""
-    if not g.user:
-        flash('Please login to access question management.', 'warning')
-        return redirect(url_for('login'))
+    """
+    Handles CRUD operations for Questions related to a specific Subject.
+    REQUIRES: Logged in user must be the Admin.
+    """
+    admin_username = app.config['ADMIN_USERNAME']
+    
+    # --- ADDED ADMIN AUTHORIZATION CHECK ---
+    if g.user != admin_username:
+        flash('Authorization required. You must be the administrator to access this panel.', 'danger')
+        return redirect(url_for('dashboard'))
 
     subject = Subject.query.get_or_404(subject_id)
     exam = subject.exam # Automatically loaded via backref
