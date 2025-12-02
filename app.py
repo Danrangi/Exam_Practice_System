@@ -35,7 +35,7 @@ class Subject(db.Model):
     exam_id = db.Column(db.Integer, db.ForeignKey('exam.id'), nullable=False)
     # Relationship: One Subject can have multiple Questions
     questions = db.relationship('Question', backref='subject', lazy=True)
-    # Ensures a subject name is unique within a specific exam (e.g., 'Physics' for JAMB is different from 'Physics' for WAEC)
+    # Ensures a subject name is unique within a specific exam 
     __table_args__ = (db.UniqueConstraint('name', 'exam_id', name='_name_exam_uc'),)
 
 # Model 3: Question
@@ -112,9 +112,6 @@ def logout():
     flash('You have been logged out.', 'info')
     return redirect(url_for('login'))
 
-# >>> MISSING ROUTE INSERTED HERE (The fix for the BuildError) <<<
-# app.py (REPLACE the existing admin_panel function with this)
-
 @app.route('/admin', methods=['GET', 'POST'])
 def admin_panel():
     """Handles displaying exam/subject data and creating new subjects."""
@@ -130,7 +127,7 @@ def admin_panel():
             flash('Both Exam Type and Subject Name are required.', 'danger')
         else:
             try:
-                # Check for uniqueness first (SQLAlchemy handles this too, but this gives a cleaner error message)
+                # Check for uniqueness first 
                 existing_subject = Subject.query.filter_by(name=subject_name, exam_id=exam_id).first()
                 if existing_subject:
                     exam_name = Exam.query.get(exam_id).name
@@ -146,19 +143,25 @@ def admin_panel():
 
     # Data to display on the page (always executed on GET and after POST)
     exams = Exam.query.all()
-    # Fetch all subjects to display under their respective exams
     all_subjects = Subject.query.order_by(Subject.exam_id, Subject.name).all()
     
     # Organize subjects by exam ID for easier rendering in the template
     subjects_by_exam = {}
     for exam in exams:
-        subjects_by_exam[exam.id] = []
-    for subject in all_subjects:
-        subjects_by_exam[subject.exam_id].append(subject)
+        subjects_by_exam[exam.id] = [
+            s for s in all_subjects if s.exam_id == exam.id
+        ]
+    
+    # FIX: Pass admin username to the template
+    admin_username = app.config['ADMIN_USERNAME']
+        
+    return render_template(
+        'admin_panel.html', 
+        exams=exams, 
+        subjects_by_exam=subjects_by_exam,
+        admin_username=admin_username
+    )
 
-    return render_template('admin_panel.html', exams=exams, subjects_by_exam=subjects_by_exam)# >>> END OF MISSING ROUTE <<<
-
-# app.py (Insert this new route after the existing admin_panel function)
 
 @app.route('/admin/questions/<int:subject_id>', methods=['GET', 'POST'])
 def question_management(subject_id):
@@ -217,14 +220,99 @@ def question_management(subject_id):
         questions=questions
     )
 
+@app.route('/take_exam/<int:subject_id>', methods=['GET', 'POST'])
+def take_exam(subject_id):
+    """Handles the display of questions and submission of the exam."""
+    if not g.user:
+        flash('Please login to take an exam.', 'warning')
+        return redirect(url_for('login'))
+
+    subject = Subject.query.get_or_404(subject_id)
+    questions = Question.query.filter_by(subject_id=subject_id).all()
+
+    if not questions:
+        flash(f"No questions available for {subject.name}.", 'danger')
+        return redirect(url_for('dashboard'))
+
+    if request.method == 'POST':
+        # Score calculation and result handling
+        score = 0
+        total_questions = len(questions)
+        
+        # Dictionary to store the user's answers and the correct answers for review
+        results = [] 
+
+        for question in questions:
+            # The name attribute of the input field is 'q_<question_id>'
+            user_answer = request.form.get(f'q_{question.id}') 
+            is_correct = (user_answer == question.correct_answer)
+            
+            # Build the results structure
+            results.append({
+                'id': question.id,
+                'question_text': question.question_text,
+                'user_answer': user_answer,
+                'correct_answer': question.correct_answer,
+                'is_correct': is_correct,
+                'explanation': question.explanation,
+                'options': {
+                    'A': question.option_a,
+                    'B': question.option_b,
+                    'C': question.option_c,
+                    'D': question.option_d,
+                }
+            })
+
+            if is_correct:
+                score += 1
+
+        # Store the results in the session to pass them to the results page
+        session['last_exam_results'] = {
+            'subject_name': subject.name,
+            'score': score,
+            'total_questions': total_questions,
+            'results_list': results
+        }
+        
+        return redirect(url_for('exam_results'))
+
+    # GET request: Display the exam questions
+    return render_template(
+        'take_exam.html', 
+        subject=subject, 
+        questions=questions
+    )
+
+
+@app.route('/exam_results')
+def exam_results():
+    """Displays the results of the last completed exam."""
+    if not g.user:
+        return redirect(url_for('login'))
+
+    results = session.pop('last_exam_results', None)
+    
+    if not results:
+        flash("No recent exam results found.", 'info')
+        return redirect(url_for('dashboard'))
+        
+    return render_template('exam_results.html', results=results)
+
+
 @app.route('/dashboard')
 def dashboard():
-    """Placeholder dashboard."""
+    """Student dashboard showing available exams and subjects."""
     if not g.user:
         flash('Please login to access this page.', 'warning')
         return redirect(url_for('login'))
         
-    return render_template('dashboard.html')
+    # Fetch all exams, and let SQLAlchemy load related subjects and questions
+    exams = Exam.query.all()
+    
+    # FIX: Pass admin username to the template
+    admin_username = app.config['ADMIN_USERNAME']
+        
+    return render_template('dashboard.html', exams=exams, admin_username=admin_username)
 
 # --- 4. MAIN APPLICATION RUNNER ---
 
@@ -232,7 +320,7 @@ if __name__ == '__main__':
     # We need to create the database tables *before* running the app.
     with app.app_context():
         db.create_all()
-        # NEW LINE: Call the function to populate initial data
+        # Call the function to populate initial data
         add_initial_data() 
         print("Database tables created successfully (if they didn't exist).")
 

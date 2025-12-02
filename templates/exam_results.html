@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Exam Results</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .result-header {
+            background-color: #f0f8ff;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .score-box {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #0d6efd;
+        }
+        .correct { border-left: 5px solid #198754; background-color: #f3fcf3; }
+        .incorrect { border-left: 5px solid #dc3545; background-color: #fffafa; }
+        .question-review { padding: 15px; margin-bottom: 15px; border-radius: 5px; }
+        .user-answer { font-weight: bold; }
+        .explanation-text {
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-primary"><i class="fas fa-trophy"></i> Exam Results</h1>
+        <h3 class="text-secondary">{{ results.subject_name }}</h3>
+
+        <div class="result-header shadow-sm">
+            <p class="mb-1 fs-4">Your Score:</p>
+            <div class="score-box">
+                {{ results.score }} / {{ results.total_questions }}
+            </div>
+            {% set percentage = (results.score / results.total_questions) * 100 %}
+            <p class="fs-5 text-dark mt-2">
+                Performance: <strong>{{ "%.2f"|format(percentage) }}%</strong>
+            </p>
+        </div>
+
+        <h2 class="mb-3">Answer Review</h2>
+        
+        {% for result in results.results_list %}
+            {% set correct_option = result.options[result.correct_answer] %}
+            
+            <div class="question-review {{ 'correct' if result.is_correct else 'incorrect' }} shadow-sm">
+                <p class="fw-bold mb-2">Q{{ loop.index }}. {{ result.question_text }}</p>
+                
+                <ul class="list-unstyled ms-3 small">
+                    <li>A. {{ result.options.A }}</li>
+                    <li>B. {{ result.options.B }}</li>
+                    <li>C. {{ result.options.C }}</li>
+                    <li>D. {{ result.options.D }}</li>
+                </ul>
+
+                <p class="mb-1">
+                    <span class="badge bg-success me-2">Correct Answer: {{ result.correct_answer }}</span>
+                    {% if result.is_correct %}
+                        <span class="badge bg-primary"><i class="fas fa-check"></i> Your Answer: {{ result.user_answer }} (Correct!)</span>
+                    {% else %}
+                        {% if result.user_answer %}
+                            <span class="badge bg-danger"><i class="fas fa-times"></i> Your Answer: {{ result.user_answer }} (Incorrect)</span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark"><i class="fas fa-minus"></i> Question Unanswered</span>
+                        {% endif %}
+                    {% endif %}
+                </p>
+                
+                {% if result.explanation %}
+                <div class="explanation-text">
+                    <strong class="text-primary">Explanation:</strong> {{ result.explanation }}
+                </div>
+                {% endif %}
+            </div>
+        {% endfor %}
+
+        <div class="text-center mt-5 mb-5">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-lg btn-secondary"><i class="fas fa-undo"></i> Return to Dashboard</a>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
