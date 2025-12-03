@@ -17,7 +17,7 @@
         <h1>Exam Content Management</h1>
         <p class="text-muted">Use this panel to define Exams, Subjects, and add Questions.</p>
 
-        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary mb-4"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+        <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary mb-4"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
 
         <!-- Display Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -32,7 +32,7 @@
         <h2 class="mt-4">1. Add New Subject</h2>
         <p>Define the subjects available under an Exam type.</p>
         <!-- The form now submits to the same page, /admin -->
-        <form method="POST" action="{{ url_for('admin_panel') }}" class="row g-3 p-3 mb-5 border rounded bg-light">
+        <form method="POST" action="{{ url_for('admin.admin_panel') }}" class="row g-3 p-3 mb-5 border rounded bg-light">
             <div class="col-md-4">
                 <label for="exam_select" class="form-label fw-bold">Select Exam Type</label>
                 <select id="exam_select" name="exam_id" class="form-select" required>
@@ -69,7 +69,7 @@
         {% for subject in subjects_by_exam[exam.id] %}
         <li>
             <span class="fw-bold">{{ subject.name }}</span>
-            <a href="{{ url_for('question_management', subject_id=subject.id) }}" class="btn btn-sm btn-info float-end">
+            <a href="{{ url_for('admin.question_management', subject_id=subject.id) }}" class="btn btn-sm btn-info float-end">
                 <i class="fas fa-plus"></i> Add Questions ({{ subject.questions|length }})
             </a>
         </li>

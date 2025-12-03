@@ -1,22 +1,24 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, g, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, g, current_app as app
 from exam_app import db
 from exam_app.models import Exam, Subject, Question
+from sqlalchemy.exc import IntegrityError
 
-admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
+# Define the blueprint
+bp = Blueprint('admin', __name__, url_prefix='/admin')
 
-
-@admin_bp.route('', methods=['GET', 'POST'], endpoint='admin_panel')
+@bp.route('/', methods=['GET', 'POST'])
 def admin_panel():
     """
     Handles displaying exam/subject data and creating new subjects.
     REQUIRES: Logged in user must be the Admin.
     """
-    admin_username = current_app.config['ADMIN_USERNAME']
-
-    # --- ADDED ADMIN AUTHORIZATION CHECK ---
+    admin_username = app.config['ADMIN_USERNAME']
+    
+    # Security Check: Only Admin is authorized
     if g.user != admin_username:
         flash('Authorization required. You must be the administrator to access this panel.', 'danger')
-        return redirect(url_for('dashboard'))
+        # Note: Need to use 'main.dashboard' endpoint from the main blueprint
+        return redirect(url_for('main.dashboard')) 
 
     if request.method == 'POST':
         exam_id = request.form.get('exam_id')
@@ -26,50 +28,60 @@ def admin_panel():
             flash('Both Exam Type and Subject Name are required.', 'danger')
         else:
             try:
-                existing_subject = Subject.query.filter_by(name=subject_name, exam_id=exam_id).first()
+                # Check for uniqueness first 
+                existing_subject = db.session.execute(db.select(Subject).filter_by(name=subject_name, exam_id=exam_id)).scalar_one_or_none()
                 if existing_subject:
-                    exam_name = Exam.query.get(exam_id).name
+                    exam_name = db.session.execute(db.select(Exam.name).filter_by(id=exam_id)).scalar_one()
                     flash(f"Subject '{subject_name}' already exists for {exam_name}.", 'danger')
                 else:
                     new_subject = Subject(name=subject_name, exam_id=exam_id)
                     db.session.add(new_subject)
                     db.session.commit()
                     flash(f"Subject '{subject_name}' added successfully!", 'success')
+            except IntegrityError:
+                db.session.rollback()
+                flash("Database error: Could not add subject.", 'danger')
             except Exception as e:
                 db.session.rollback()
-                flash(f"An error occurred while adding the subject: {e}", 'danger')
+                flash(f"An error occurred: {e}", 'danger')
 
-    exams = Exam.query.all()
-    all_subjects = Subject.query.order_by(Subject.exam_id, Subject.name).all()
-
-    subjects_by_exam = {}
-    for exam in exams:
-        subjects_by_exam[exam.id] = [s for s in all_subjects if s.exam_id == exam.id]
+    # Data to display on the page
+    exams = db.session.execute(db.select(Exam)).scalars().all()
+    all_subjects = db.session.execute(db.select(Subject).order_by(Subject.exam_id, Subject.name)).scalars().all()
+    
+    subjects_by_exam = {exam.id: [] for exam in exams}
+    for subject in all_subjects:
+        subjects_by_exam[subject.exam_id].append(subject)
 
     return render_template(
-        'admin_panel.html',
-        exams=exams,
-        subjects_by_exam=subjects_by_exam
+        'admin_panel.html', 
+        exams=exams, 
+        subjects_by_exam=subjects_by_exam,
+        admin_username=admin_username
     )
 
 
-@admin_bp.route('/questions/<int:subject_id>', methods=['GET', 'POST'], endpoint='question_management')
+@bp.route('/questions/<int:subject_id>', methods=['GET', 'POST'])
 def question_management(subject_id):
     """
     Handles CRUD operations for Questions related to a specific Subject.
     REQUIRES: Logged in user must be the Admin.
     """
-    admin_username = current_app.config['ADMIN_USERNAME']
-
-    # --- ADDED ADMIN AUTHORIZATION CHECK ---
+    admin_username = app.config['ADMIN_USERNAME']
+    
+    # Security Check: Only Admin is authorized
     if g.user != admin_username:
         flash('Authorization required. You must be the administrator to access this panel.', 'danger')
-        return redirect(url_for('dashboard'))
+        return redirect(url_for('main.dashboard'))
 
-    subject = Subject.query.get_or_404(subject_id)
-    exam = subject.exam
+    subject = db.session.execute(db.select(Subject).filter_by(id=subject_id)).scalar_one_or_none()
+    if not subject:
+        return redirect(url_for('admin.admin_panel')) # Redirect if subject not found
+        
+    exam = subject.exam 
 
     if request.method == 'POST':
+        # Retrieve form data
         question_text = request.form.get('question_text', '').strip()
         option_a = request.form.get('option_a', '').strip()
         option_b = request.form.get('option_b', '').strip()
@@ -78,6 +90,7 @@ def question_management(subject_id):
         correct_answer = request.form.get('correct_answer', '').upper()
         explanation = request.form.get('explanation', '').strip()
 
+        # Simple validation
         if not all([question_text, option_a, option_b, option_c, option_d, correct_answer]):
             flash('All question fields and the correct answer must be provided.', 'danger')
         elif correct_answer not in ['A', 'B', 'C', 'D']:
@@ -97,11 +110,18 @@ def question_management(subject_id):
                 db.session.add(new_question)
                 db.session.commit()
                 flash('Question added successfully!', 'success')
-                return redirect(url_for('question_management', subject_id=subject_id))
+                return redirect(url_for('admin.question_management', subject_id=subject_id))
+
             except Exception as e:
                 db.session.rollback()
                 flash(f"An error occurred while adding the question: {e}", 'danger')
 
-    questions = Question.query.filter_by(subject_id=subject_id).order_by(Question.id.desc()).all()
-
-    return render_template('question_management.html', subject=subject, exam=exam, questions=questions)
+    # Data for GET
+    questions = db.session.execute(db.select(Question).filter_by(subject_id=subject_id).order_by(Question.id.desc())).scalars().all()
+    
+    return render_template(
+        'question_management.html', 
+        subject=subject, 
+        exam=exam, 
+        questions=questions
+    )

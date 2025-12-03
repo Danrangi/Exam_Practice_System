@@ -17,7 +17,7 @@
         <h1 class="mb-0">Question Management</h1>
         <h3 class="text-primary mb-4">{{ subject.name }} ({{ exam.name }})</h3>
         
-        <a href="{{ url_for('admin_panel') }}" class="btn btn-secondary mb-4"><i class="fas fa-arrow-left"></i> Back to Admin Panel</a>
+        <a href="{{ url_for('admin.admin_panel') }}" class="btn btn-secondary mb-4"><i class="fas fa-arrow-left"></i> Back to Admin Panel</a>
 
         <!-- Display Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -31,7 +31,7 @@
         <!-- 1. ADD NEW QUESTION FORM -->
         <div class="card p-4 shadow-sm mb-5">
             <h2 class="card-title text-success"><i class="fas fa-clipboard-question"></i> Add New Question</h2>
-            <form method="POST" action="{{ url_for('question_management', subject_id=subject.id) }}">
+            <form method="POST" action="{{ url_for('admin.question_management', subject_id=subject.id) }}">
                 <div class="mb-3">
                     <label for="question_text" class="form-label fw-bold">Question Text (Use LaTeX for formulas: \$ E=mc^2 \$)</label>
                     <textarea class="form-control" id="question_text" name="question_text" rows="3" required></textarea>
