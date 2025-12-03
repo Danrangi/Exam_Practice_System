@@ -1,49 +1,46 @@
-from flask import Flask, g, session
+import os
+from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 
-# Create the SQLAlchemy db instance (will be initialized in create_app)
+# Initialize database globally
 db = SQLAlchemy()
 
+def create_app(test_config=None):
+    # Determine the project root for finding templates/static folders
+    # This assumes the app is run from the project root directory where 'app.py' is located
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    
+    app = Flask(
+        'exam_app',
+        instance_relative_config=True,
+        # *** FIX ***: Explicitly set template and static folders to the root directories
+        template_folder=os.path.join(project_root, 'templates'), 
+        static_folder=os.path.join(project_root, 'static')
+    )
 
-def create_app():
-    """Application factory: create and configure the Flask app."""
-    app = Flask(__name__, template_folder='templates', static_folder='static')
-    # Load configuration from top-level config.py
-    app.config.from_object('config.Config')
+    # Load configuration
+    from . import config
+    app.config.from_object(config.Config)
 
     # Initialize extensions
     db.init_app(app)
 
-    # Register blueprints
-    from .routes.auth import auth_bp
-    from .routes.admin import admin_bp
-    from .routes.main import main_bp
-
-    app.register_blueprint(auth_bp)
-    app.register_blueprint(admin_bp)
-    app.register_blueprint(main_bp)
-
-    @app.before_request
-    def before_request():
-        """Set g.user for request-level user info (mirrors previous behavior)."""
-        g.user = None
-        if 'username' in session:
-            g.user = session['username']
-
-    @app.context_processor
-    def inject_admin_username():
-        """Make `admin_username` available to all templates."""
-        return dict(admin_username=app.config.get('ADMIN_USERNAME'))
-
-    # Ensure database tables exist and initial data is present
     with app.app_context():
-        from . import models  # noqa: F401 (ensure models are registered)
+        # Import models and utility functions so they are registered
+        from . import models
+        from . import utils
+        
+        # Create database tables if they don't exist
         db.create_all()
-        # Add initial exam data if missing
-        try:
-            models.add_initial_data()
-        except Exception:
-            # If something goes wrong, we don't want app import to fail
-            pass
+        utils.add_initial_data(app)
 
-    return app
+        # Register Blueprints for routes
+        from .routes import auth, admin, main
+        app.register_blueprint(auth.bp)
+        app.register_blueprint(admin.bp)
+        app.register_blueprint(main.bp)
+
+        # Ensure before_request is registered (from utils/auth)
+        app.before_request(utils.before_request)
+        
+        return app
