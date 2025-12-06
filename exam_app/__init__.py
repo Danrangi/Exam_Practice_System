@@ -1,4 +1,5 @@
 import os
+import sys
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf.csrf import CSRFProtect
@@ -8,12 +9,29 @@ db = SQLAlchemy()
 csrf = CSRFProtect()
 
 def create_app(test_config=None):
-    # Determine the project root for finding templates/static folders
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    
+    # Check if we are running as a compiled .exe (Frozen)
+    if getattr(sys, 'frozen', False):
+        # 1. TEMPLATES/STATIC: Look inside the temporary bundled folder
+        project_root = sys._MEIPASS
+        
+        # 2. DATABASE: Look in the same folder as the .exe (so data is saved permanently)
+        # We explicitly set the 'instance_path' to the executable's directory
+        exe_dir = os.path.dirname(sys.executable)
+        instance_path = os.path.join(exe_dir, 'instance')
+        
+        # Create the instance folder if it doesn't exist
+        if not os.path.exists(instance_path):
+            os.makedirs(instance_path)
+            
+    else:
+        # Running normally with 'python app.py'
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        instance_path = None # Flask handles this automatically
+
     app = Flask(
         'exam_app',
         instance_relative_config=True,
+        instance_path=instance_path, # <--- This ensures the DB is saved correctly
         template_folder=os.path.join(project_root, 'templates'), 
         static_folder=os.path.join(project_root, 'static')
     )
