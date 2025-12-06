@@ -1,0 +1,38 @@
+:root {
+    /* Brand Colors */
+    --jamb-green: #008751;  /* Nigerian Green */
+    --waec-gold: #D4AF37;   /* Classic Gold */
+    --neco-blue: #0056b3;   /* Deep Blue */
+    
+    /* UX Colors */
+    --text-main: #111827;
+    --text-muted: #6b7280;
+    --surface: #ffffff;
+    --background: #f3f4f6;
+    --danger: #ef4444;
+    --success: #10b981;
+    --warning-bg: #fefce8;
+    
+    /* Dimensions */
+    --header-height: 70px;
+    --sidebar-width: 320px;
+    
+    /* Fonts */
+    --font-main: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-mono: 'Roboto Mono', monospace;
+}
+
+body {
+    background-color: var(--background);
+    color: var(--text-main);
+    font-family: var(--font-main);
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    overflow-x: hidden;
+}
+
+/* Utilities */
+.fw-bold { font-weight: 700; }
+.text-danger { color: var(--danger) !important; }
+.shadow-md { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
