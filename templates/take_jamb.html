@@ -162,18 +162,10 @@
 
     <script src="{{ url_for('static', filename='vendor/js/bootstrap.bundle.min.js') }}"></script>
     <script>
-        // --- ALERT LOGIC ---
-        function openAlert() {
-            document.getElementById('sysAlert').classList.add('active');
-        }
-        function closeAlert() {
-            document.getElementById('sysAlert').classList.remove('active');
-        }
-        function finalSubmit() {
-            document.getElementById('examForm').submit();
-        }
+        function openAlert() { document.getElementById('sysAlert').classList.add('active'); }
+        function closeAlert() { document.getElementById('sysAlert').classList.remove('active'); }
+        function finalSubmit() { document.getElementById('examForm').submit(); }
 
-        // --- SELECTION LOGIC ---
         function selectOption(inputName, value, card, subjectIndex, questionIndex) {
             const radio = card.querySelector('input[type="radio"]');
             radio.checked = true;
@@ -184,7 +176,6 @@
             if(btn) btn.classList.add('answered');
         }
 
-        // --- TABS & VISIBILITY ---
         let currentSubjectIdx = 1;
         function switchTab(index, btn) {
             currentSubjectIdx = index;
@@ -196,7 +187,6 @@
             document.getElementById(`palette-${index}`).classList.remove('d-none');
         }
 
-        // --- NAVIGATION ---
         function scrollToQuestion(subjectIdx, questionIdx) {
             const el = document.getElementById(`q-${subjectIdx}-${questionIdx}`);
             if(el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -211,7 +201,6 @@
             if (e.key.toLowerCase() === 'p') navQuestion(-1);
         });
 
-        // --- TIMER ---
         let totalSeconds = 120 * 60; 
         const timerElem = document.getElementById('timer');
         setInterval(() => {
@@ -224,7 +213,6 @@
             totalSeconds--;
         }, 1000);
 
-        // --- CALCULATOR ---
         function toggleCalc() {
             const modal = document.getElementById('calculator');
             modal.style.display = modal.style.display === 'block' ? 'none' : 'block';

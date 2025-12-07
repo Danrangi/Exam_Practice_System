@@ -1,7 +1,6 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, g, current_app as app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, g, current_app as app, Response
 from exam_app import db
 from exam_app.models import Exam, Subject, Question
-from sqlalchemy.exc import IntegrityError
 import csv
 import io
 
@@ -93,10 +92,7 @@ def question_management(subject_id):
                     csv_input = csv.DictReader(stream)
                     count = 0
                     for row in csv_input:
-                        # Normalize keys (strip spaces)
-                        row = {k.strip(): v.strip() for k, v in row.items()}
-                        
-                        # Basic Validation
+                        row = {k.strip(): v.strip() for k, v in row.items() if k}
                         if 'question_text' in row and 'correct_answer' in row:
                             new_q = Question(
                                 question_text=row.get('question_text'),
@@ -119,9 +115,9 @@ def question_management(subject_id):
                 flash('Invalid file type. Please upload a CSV.', 'danger')
             return redirect(url_for('admin.question_management', subject_id=subject_id))
 
-        # Normal Single Question Add Logic
+        # Manual Add
         q_text = request.form.get('question_text', '').strip()
-        if q_text: # Ensure it's not the file upload form submission
+        if q_text:
             opt_a = request.form.get('option_a', '').strip()
             opt_b = request.form.get('option_b', '').strip()
             opt_c = request.form.get('option_c', '').strip()
@@ -178,3 +174,18 @@ def edit_question(question_id):
         return redirect(url_for('admin.question_management', subject_id=question.subject_id))
         
     return render_template('edit_question.html', question=question)
+
+@bp.route('/download_sample_csv')
+def download_sample_csv():
+    if not g.user or g.user != app.config['ADMIN_USERNAME']:
+        return redirect(url_for('auth.login'))
+    
+    csv_content = "question_text,option_a,option_b,option_c,option_d,correct_answer,explanation\n"
+    csv_content += "What is 2+2?,2,3,4,5,C,Basic Math\n"
+    csv_content += "Capital of Nigeria?,Lagos,Abuja,Kano,Enugu,B,Federal Capital Territory\n"
+    
+    return Response(
+        csv_content,
+        mimetype="text/csv",
+        headers={"Content-disposition": "attachment; filename=sample_questions.csv"}
+    )

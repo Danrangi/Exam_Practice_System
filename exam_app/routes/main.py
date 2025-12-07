@@ -18,7 +18,6 @@ def dashboard():
 
 @bp.route('/jamb_setup', methods=['GET', 'POST'])
 def jamb_setup():
-    """Select 4 subjects for JAMB Mock."""
     if not g.user: return redirect(url_for('auth.login'))
     
     jamb_exam = Exam.query.filter_by(name='JAMB').first()
@@ -34,8 +33,7 @@ def jamb_setup():
             flash('You must select exactly 4 subjects.', 'danger')
         else:
             session['jamb_subjects'] = selected_ids
-            # Clear any previous exam session data
-            session.pop('jamb_question_ids', None)
+            session.pop('jamb_question_ids', None) # Clear old session
             return redirect(url_for('main.take_jamb'))
             
     return render_template('jamb_setup.html', subjects=subjects)
@@ -48,34 +46,27 @@ def take_jamb():
     if not subject_ids:
         return redirect(url_for('main.jamb_setup'))
 
-    # If submitting the exam
     if request.method == 'POST':
         total_score = 0
         results_list = []
         
-        # Retrieve the specific questions served to the user from session
         served_question_ids = session.get('jamb_question_ids', [])
         
         if not served_question_ids:
-             flash('Exam session expired or invalid. Please retake.', 'warning')
+             # Fallback if session lost (rare but possible)
+             flash('Session expired. Please restart the exam.', 'warning')
              return redirect(url_for('main.dashboard'))
 
         for q_id in served_question_ids:
             question = Question.query.get(q_id)
             if question:
-                # Get user answer (will be None if skipped)
                 user_answer = request.form.get(f'q_{q_id}')
-                
-                is_correct = False
-                if user_answer:
-                    is_correct = (user_answer == question.correct_answer)
-                
-                if is_correct: 
-                    total_score += 1
+                is_correct = (user_answer == question.correct_answer) if user_answer else False
+                if is_correct: total_score += 1
                 
                 results_list.append({
                     'question_text': question.question_text,
-                    'user_answer': user_answer, # Can be None
+                    'user_answer': user_answer,
                     'correct_answer': question.correct_answer,
                     'is_correct': is_correct,
                     'explanation': question.explanation,
@@ -91,25 +82,22 @@ def take_jamb():
         }
         return redirect(url_for('main.exam_results'))
 
-    # GET: Prepare the exam
+    # GET: Prepare exam
     exam_data = {} 
     all_served_ids = []
     
     for sub_id in subject_ids:
         subject = Subject.query.get(sub_id)
-        limit = 60 if 'english' in subject.name.lower() else 40
+        if subject:
+            limit = 60 if 'english' in subject.name.lower() else 40
+            questions = Question.query.filter_by(subject_id=subject.id).all()
+            random.shuffle(questions)
+            selected_questions = questions[:limit]
+            
+            exam_data[subject.name] = selected_questions
+            all_served_ids.extend([q.id for q in selected_questions])
         
-        questions = Question.query.filter_by(subject_id=subject.id).all()
-        random.shuffle(questions)
-        selected_questions = questions[:limit]
-        
-        exam_data[subject.name] = selected_questions
-        # Track IDs to save in session
-        all_served_ids.extend([q.id for q in selected_questions])
-        
-    # Save the exact list of questions served to the session
     session['jamb_question_ids'] = all_served_ids
-        
     return render_template('take_jamb.html', exam_data=exam_data)
 
 @bp.route('/take_exam/<int:subject_id>', methods=['GET', 'POST'])
@@ -117,6 +105,7 @@ def take_exam(subject_id):
     if not g.user: return redirect(url_for('auth.login'))
     subject = Subject.query.get_or_404(subject_id)
     questions = Question.query.filter_by(subject_id=subject_id).all()
+    
     if not questions:
         flash(f"No questions for {subject.name}.", 'danger')
         return redirect(url_for('main.dashboard'))
@@ -127,7 +116,6 @@ def take_exam(subject_id):
         for q in questions:
             user_ans = request.form.get(f'q_{q.id}')
             is_corr = (user_ans == q.correct_answer) if user_ans else False
-            
             if is_corr: score += 1
             
             results.append({
